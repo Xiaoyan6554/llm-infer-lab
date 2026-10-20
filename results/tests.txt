@@ -1,0 +1,25 @@
+[ OK ] allocator_basic
+[ OK ] add_sequence_allocates_ceil_blocks
+[ OK ] add_sequence_fails_without_side_effects
+[ OK ] append_crosses_block_boundary
+[ OK ] append_fails_when_out_of_blocks
+[ OK ] fork_shares_blocks_and_copy_on_write
+[ OK ] prefix_caching_reuses_full_blocks
+[ OK ] prefix_caching_requires_identical_prefix
+[ OK ] prefix_caching_disabled_never_shares
+[ OK ] decode_filled_block_becomes_cacheable
+[ OK ] free_returns_all_blocks_and_clears_cache
+[ OK ] slot_utilization_after_fork_and_cow
+[ OK ] lru_keeps_freed_blocks_hittable
+[ OK ] lru_evicts_oldest_only_when_no_free_block
+[ OK ] lru_hits_are_not_counted_as_free_space
+[ OK ] lru_free_all_keeps_cache_but_releases_space
+[ OK ] watermark_rejects_admission_but_not_decode
+[ OK ] watermark_ignored_when_nothing_is_running
+
+18 tests, 0 failed
+......
+----------------------------------------------------------------------
+Ran 6 tests in 0.001s
+
+OK

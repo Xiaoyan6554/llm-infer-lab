@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>llm-infer-lab 实验面板</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --surface-2: #f0efec; --cell-free: #e9e8e2;
+  --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781; --grid: #e1e0d9; --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10); --bar-muted: #c3c2b7; --good: #006300; --warn-bg: #fff6e0; --warn-ink: #6b4a00;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321; --cell-free: #2a2a28;
+    --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+    --border: rgba(255,255,255,0.10); --bar-muted: #4a4945; --good: #0ca30c; --warn-bg: #2e2510; --warn-ink: #f2c66b;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321; --cell-free: #2a2a28;
+  --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --axis: #383835;
+  --border: rgba(255,255,255,0.10); --bar-muted: #4a4945; --good: #0ca30c; --warn-bg: #2e2510; --warn-ink: #f2c66b;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--page); color: var(--ink);
+  font: 14px/1.6 system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1160px; margin: 0 auto; padding: 28px 16px 64px; }
+header.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+h1 { font-size: 22px; line-height: 1.3; margin: 0 0 4px; font-weight: 650; letter-spacing: 0.01em; }
+.lede { color: var(--ink-2); margin: 0; max-width: 720px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); font-size: 12px; white-space: nowrap; }
+.chip b { color: var(--ink); font-weight: 600; }
+.chip .ok { color: var(--good); font-weight: 700; }
+button.chip { cursor: pointer; font: inherit; font-size: 12px; }
+h2 { font-size: 17px; margin: 36px 0 4px; font-weight: 650; }
+h2 + .sec-sub { color: var(--ink-2); margin: 0 0 14px; max-width: 820px; }
+.kpis { display: grid; grid-template-columns: 1.3fr repeat(4, 1fr); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.tile .label { color: var(--ink-2); font-size: 12.5px; }
+.tile .value { font-size: 26px; font-weight: 650; line-height: 1.25; margin-top: 4px; }
+.tile .value small { font-size: 14px; font-weight: 500; color: var(--ink-2); }
+.tile .delta { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
+.tile .delta b { color: var(--good); font-weight: 600; }
+.tile.hero .value { font-size: 52px; line-height: 1.1; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px 12px; min-width: 0; }
+.card.wide { grid-column: 1 / -1; }
+.card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.card-h h3 { font-size: 14.5px; margin: 0; font-weight: 620; }
+.card-h .sub { color: var(--ink-2); font-size: 12.5px; margin-top: 1px; }
+.tbtn { font: inherit; font-size: 12px; color: var(--ink-2); background: transparent; border: 1px solid var(--border); border-radius: 6px; padding: 1px 8px; cursor: pointer; flex-shrink: 0; }
+.tbtn:hover { background: var(--surface-2); }
+.multi { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 4px 18px; margin-top: 8px; }
+.multi.quad { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 1100px) { .multi.quad { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .multi.quad { grid-template-columns: minmax(0, 1fr); } }
+.mini-t { font-size: 12.5px; color: var(--ink-2); margin: 6px 0 0; }
+.chart { position: relative; margin-top: 6px; }
+.chart svg { display: block; overflow: visible; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin: 6px 0 2px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.key-line { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+.key-box { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+table.tv { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; font-variant-numeric: tabular-nums; }
+table.tv th, table.tv td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+table.tv th:first-child, table.tv td:first-child { text-align: left; }
+table.tv th { color: var(--ink-2); font-weight: 600; }
+.tv-wrap { overflow-x: auto; }
+.note { font-size: 12.5px; color: var(--ink-2); margin: 8px 0 0; }
+.badge { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 999px; background: var(--warn-bg); color: var(--warn-ink); font-weight: 600; vertical-align: 2px; margin-left: 6px; }
+#tip { position: fixed; z-index: 10; pointer-events: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); padding: 7px 10px; font-size: 12px; min-width: 120px; display: none; font-variant-numeric: tabular-nums; }
+#tip .tt { color: var(--ink-2); margin-bottom: 3px; }
+#tip .row { display: flex; align-items: center; gap: 7px; }
+#tip .row b { color: var(--ink); font-weight: 650; }
+#tip .row span.n { color: var(--ink-2); }
+/* 显存回放 */
+.player { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tab { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--ink-2); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.scene-desc { color: var(--ink-2); font-size: 13px; margin: 0 0 12px; max-width: 900px; }
+.arena { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.lane h4 { margin: 0 0 6px; font-size: 13.5px; font-weight: 620; }
+.lane canvas { width: 100%; display: block; border-radius: 6px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.stat { background: var(--surface-2); border-radius: 8px; padding: 5px 8px; min-width: 0; }
+.stat .k { font-size: 11.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat .v { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; }
+.controls input[type=range] { flex: 1; min-width: 160px; accent-color: var(--s1); }
+.ctl { font: inherit; font-size: 13px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; }
+.ctl[aria-pressed="true"] { background: var(--surface-2); font-weight: 600; }
+.stepno { font-variant-numeric: tabular-nums; color: var(--ink-2); font-size: 13px; min-width: 120px; }
+.cell-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); margin-top: 10px; }
+.cell-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.todo { border: 1px dashed var(--axis); border-radius: 12px; padding: 14px 16px; background: var(--surface); }
+.todo h3 { margin: 0 0 6px; font-size: 14.5px; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+pre { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; overflow-x: auto; margin: 8px 0 0; }
+.resume { margin: 8px 0 0; padding-left: 18px; }
+.resume li { margin: 4px 0; }
+footer { margin-top: 40px; color: var(--muted); font-size: 12px; }
+footer a, header a { color: var(--ink-2); }
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tile.hero { grid-column: 1 / -1; }
+  .grid3 { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .grid2, .arena { grid-template-columns: minmax(0, 1fr); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tile.hero .value { font-size: 44px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>llm-infer-lab · 大模型推理显存管理与服务性能实验</h1>
+      <p class="lede">C++ 从零实现 PagedAttention 式分页 KV cache（引用计数、写时复制、哈希链前缀缓存、LRU 延迟驱逐、准入水位线），用调度模拟器量化它对吞吐上限的影响；再用自写压测工具测服务的 TTFT / TPOT / 吞吐。</p>
+    </div>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="关键数字"></section>
+
+  <h2>显存回放：同样的显存，能同时跑多少请求</h2>
+  <p class="sec-sub">每个格子是 16 个 token 的 KV cache 显存，一共 1,024 格。数据是 C++ 模拟器每 20 步拍的一张快照，用的就是 <code>kvcache/</code> 里的 KVCacheManager。两边同步播放，先跑完的一边就是吞吐高的一边。</p>
+  <div class="player">
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <p class="scene-desc" id="scene-desc"></p>
+    <div class="arena" id="arena"></div>
+    <div class="controls">
+      <button class="ctl" id="play" type="button">暂停</button>
+      <button class="ctl" id="restart" type="button">重播</button>
+      <input type="range" id="scrub" min="0" max="100" value="0" aria-label="模拟步数">
+      <span class="stepno" id="stepno"></span>
+      <span id="speeds"></span>
+    </div>
+    <div class="cell-legend" id="cell-legend"></div>
+    <div class="chart" id="race"></div>
+  </div>
+
+  <h2>模拟实验结果</h2>
+  <p class="sec-sub" id="sim-sub"></p>
+  <div class="grid2" id="sim-cards"></div>
+
+  <h2>在基础实现上的改进</h2>
+  <p class="sec-sub">在基础实现上加了准入水位线、LRU 延迟驱逐、块大小实验和重算开销统计，每一项都有单元测试和模拟数据对比。</p>
+  <div class="grid2" id="improve-cards"></div>
+
+  <h2>服务压测 <span class="badge" id="mock-badge">mock 服务 · 只验证工具链</span></h2>
+  <p class="sec-sub">压测工具只用 Python 标准库，闭环固定并发 + 预热 + ignore_eos，统计 TTFT / TPOT / ITL / E2E 的 P50/P95/P99。下面是在本机 mock 服务上跑的结果，用来证明工具和画图流程是通的；mock 服务的延迟是人为设定的，<b>不是 GPU 性能数据</b>。</p>
+  <div class="grid2" id="mock-cards"></div>
+
+  <h2>GPU 实验：vLLM + Qwen2.5-7B-Instruct，RTX 4090</h2>
+  <div id="gpu"></div>
+
+  <footer id="footer"></footer>
+</div>
+<div id="tip" role="tooltip"></div>
+
+<script>
+window.__DATA__ = /*__DATA__*/null;
+</script>
+<script>
+(function () {
+  "use strict";
+  const D = window.__DATA__;
+  const NS = "http://www.w3.org/2000/svg";
+  const $ = (s, el) => (el || document).querySelector(s);
+
+  // ---------- 小工具 ----------
+  function el(tag, attrs, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === "class") n.className = v;
+      else if (k === "style") n.style.cssText = v;
+      else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v);
+    }
+    for (const k of kids) if (k != null) n.append(k instanceof Node ? k : document.createTextNode(String(k)));
+    return n;
+  }
+  function svg(tag, attrs, parent) {
+    const n = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) n.setAttribute(k, v);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const int = (v) => Math.round(v).toLocaleString("zh-CN");
+  const pct = (v, nd = 1) => (v * 100).toFixed(nd) + "%";
+  const fix = (v, nd = 1) => Number(v).toFixed(nd);
+  function compact(v) {
+    const a = Math.abs(v);
+    if (a >= 1e6) return (v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, "") + "M";
+    if (a >= 1e3) return (v / 1e3).toFixed(a >= 1e4 ? 0 : 1).replace(/\.0$/, "") + "K";
+    return String(+Number(v).toFixed(2));
+  }
+  function niceTicks(min, max, count) {
+    if (!(max > min)) max = min + 1;
+    const raw = (max - min) / (count || 4);
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / mag;
+    const step = (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * mag;
+    const lo = Math.floor(min / step + 1e-9) * step, hi = Math.ceil(max / step - 1e-9) * step;
+    const out = [];
+    for (let v = lo; v <= hi + step / 2; v += step) out.push(+v.toFixed(10));
+    return out;
+  }
+  let measureCtx;
+  function textW(s, size) {
+    measureCtx = measureCtx || document.createElement("canvas").getContext("2d");
+    measureCtx.font = `${size || 12}px system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif`;
+    return measureCtx.measureText(s).width;
+  }
+
+  // ---------- tooltip ----------
+  const tip = $("#tip");
+  function showTip(evt, title, rows) {
+    tip.replaceChildren();
+    if (title) tip.append(el("div", { class: "tt" }, title));
+    for (const r of rows) {
+      const row = el("div", { class: "row" });
+      if (r.color) row.append(el("span", { class: "key-line", style: `background:${r.color}` }));
+      row.append(el("b", {}, r.value));
+      if (r.name) row.append(el("span", { class: "n" }, r.name));
+      tip.append(row);
+    }
+    tip.style.display = "block";
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    let x = evt.clientX + 14, y = evt.clientY + 14;
+    if (x + w > innerWidth - 8) x = evt.clientX - w - 14;
+    if (y + h > innerHeight - 8) y = evt.clientY - h - 14;
+    tip.style.left = x + "px";
+    tip.style.top = y + "px";
+  }
+  const hideTip = () => { tip.style.display = "none"; };
+
+  // ---------- 卡片 + 表格视图 ----------
+  function card(parent, { title, sub, wide, table }) {
+    const c = el("div", { class: "card" + (wide ? " wide" : "") });
+    const head = el("div", { class: "card-h" }, el("div", {}, el("h3", {}, title), sub ? el("div", { class: "sub" }, sub) : null));
+    const body = el("div", {});
+    c.append(head, body);
+    if (table) {
+      const tv = el("div", { class: "tv-wrap", hidden: "" });
+      const t = el("table", { class: "tv" });
+      t.append(el("thead", {}, el("tr", {}, ...table.cols.map((h) => el("th", {}, h)))));
+      const tb = el("tbody");
+      for (const r of table.rows) tb.append(el("tr", {}, ...r.map((v) => el("td", {}, v))));
+      t.append(tb);
+      tv.append(t);
+      const btn = el("button", { class: "tbtn", type: "button", "aria-pressed": "false" }, "表格");
+      btn.addEventListener("click", () => {
+        const on = tv.hidden;
+        tv.hidden = !on;
+        body.hidden = on;
+        btn.textContent = on ? "图表" : "表格";
+        btn.setAttribute("aria-pressed", String(on));
+      });
+      head.append(btn);
+      c.append(tv);
+    }
+    parent.append(c);
+    return body;
+  }
+  function legend(items) {
+    return el("div", { class: "legend" }, ...items.map((it) =>
+      el("span", {}, el("span", { class: it.kind === "box" ? "key-box" : "key-line", style: `background:${it.color}` }), it.name)));
+  }
+
+  // ---------- 折线图（带十字线 tooltip） ----------
+  const renderers = [];
+  function mount(box, draw) {
+    renderers.push(() => draw(box));
+    draw(box);
+  }
+  function lineChart(box, opt) {
+    box.replaceChildren();
+    box.classList.add("chart");
+    const series = opt.series.filter((s) => s.points.length);
+    if (series.length >= 2 && opt.legend !== false) box.append(legend(series.map((s) => ({ name: s.name, color: s.color }))));
+    const W = Math.max(240, box.clientWidth), H = opt.height || 200;
+    const xs = [...new Set(series.flatMap((s) => s.points.map((p) => p[0])))].sort((a, b) => a - b);
+    const ordinal = !!opt.ordinal;
+    const pos = (v) => (ordinal ? xs.indexOf(v) : opt.xLog ? Math.log2(v) : v);
+    const ys = series.flatMap((s) => s.points.map((p) => p[1]));
+    if (opt.ref) for (const v of xs) ys.push(opt.ref(v));
+    let ymin = opt.yMin != null ? opt.yMin : Math.min(0, ...ys), ymax = Math.max(...ys);
+    if (opt.yMax != null) ymax = Math.max(ymax, opt.yMax);
+    const yt = niceTicks(ymin, ymax, opt.yTicks || 4);
+    ymin = yt[0]; ymax = yt[yt.length - 1];
+    const ylabW = Math.max(...yt.map((v) => textW((opt.yFmt || compact)(v), 11))) + 10;
+    const endLab = opt.endLabels !== false && series.length >= 2 && series.length <= 4;
+    const m = { l: ylabW, r: endLab ? 10 + Math.max(...series.map((s) => textW(s.short || s.name, 11.5))) : 14, t: 8, b: opt.xLabel ? 38 : 24 };
+    // 线性横轴：没指定范围时把范围扩到整齐的刻度上，最后一个刻度就不会画到图外面
+    const linear = !ordinal && !opt.xLog;
+    const autoT = linear && !opt.xTicks ? niceTicks(opt.xMin != null ? opt.xMin : xs[0], opt.xMax != null ? opt.xMax : xs[xs.length - 1], 5) : null;
+    const lo = opt.xMin != null ? opt.xMin : autoT ? autoT[0] : xs[0];
+    const hi = opt.xMax != null ? opt.xMax : autoT ? autoT[autoT.length - 1] : xs[xs.length - 1];
+    const p0 = pos(lo), p1 = pos(hi);
+    const X = (v) => m.l + ((pos(v) - p0) / ((p1 - p0) || 1)) * (W - m.l - m.r);
+    const Y = (v) => m.t + (1 - (v - ymin) / ((ymax - ymin) || 1)) * (H - m.t - m.b);
+    const root = svg("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opt.aria || "" });
+    for (const v of yt) {
+      svg("line", { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), stroke: v === ymin ? css("--axis") : css("--grid"), "stroke-width": 1, "shape-rendering": "crispEdges" }, root);
+      const t = svg("text", { x: m.l - 6, y: Y(v) + 4, "text-anchor": "end", "font-size": 11, fill: css("--muted"), style: "font-variant-numeric:tabular-nums" }, root);
+      t.textContent = (opt.yFmt || compact)(v);
+    }
+    const xticks = (opt.xTicks || (ordinal || opt.xLog ? xs : autoT)).filter((v) => v >= lo - 1e-9 && v <= hi + 1e-9);
+    let lastRight = -1e9;
+    for (const v of xticks) {
+      const label = (opt.xFmt || compact)(v), w = textW(label, 11), x = X(v);
+      if (x - w / 2 < lastRight + 4) continue;  // 放不下就跳过，不重叠
+      lastRight = x + w / 2;
+      const t = svg("text", { x, y: H - m.b + 15, "text-anchor": "middle", "font-size": 11, fill: css("--muted"), style: "font-variant-numeric:tabular-nums" }, root);
+      t.textContent = label;
+    }
+    if (opt.xLabel) {
+      const t = svg("text", { x: m.l + (W - m.l - m.r) / 2, y: H - 4, "text-anchor": "middle", "font-size": 11, fill: css("--ink-2") }, root);
+      t.textContent = opt.xLabel;
+    }
+    if (opt.ref) {
+      // 参考线按每个 x 采样后连成折线，所以在对数横轴上也画得对
+      const d = xs.map((v, i) => (i ? "L" : "M") + X(v).toFixed(1) + "," + Y(opt.ref(v)).toFixed(1)).join("");
+      svg("path", { d, fill: "none", stroke: css("--muted"), "stroke-width": 1.5, "stroke-linejoin": "round" }, root);
+    }
+    const surface = css("--surface");
+    for (const s of series) {
+      const d = s.points.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join("");
+      svg("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, root);
+      if (opt.markers !== false && s.points.length <= 40)
+        for (const p of s.points) svg("circle", { cx: X(p[0]), cy: Y(p[1]), r: 4, fill: s.color, stroke: surface, "stroke-width": 2 }, root);
+    }
+    if (endLab) {
+      const ends = series.map((s) => ({ s, y: Y(s.points[s.points.length - 1][1]), x: X(s.points[s.points.length - 1][0]) })).sort((a, b) => a.y - b.y);
+      const collide = ends.some((e, i) => i && e.y - ends[i - 1].y < 13);
+      if (!collide)
+        for (const e of ends) {
+          const t = svg("text", { x: e.x + 8, y: e.y + 4, "font-size": 11.5, fill: css("--ink-2") }, root);
+          t.textContent = e.s.short || e.s.name;
+        }
+    }
+    const cursor = svg("line", { y1: m.t, y2: H - m.b, stroke: css("--ink-2"), "stroke-width": 1, visibility: "hidden" }, root);
+    const hair = svg("line", { y1: m.t, y2: H - m.b, stroke: css("--axis"), "stroke-width": 1, visibility: "hidden" }, root);
+    const hit = svg("rect", { x: m.l - 8, y: 0, width: W - m.l - m.r + 16, height: H - m.b, fill: "transparent" }, root);
+    hit.addEventListener("pointermove", (e) => {
+      const r = root.getBoundingClientRect(), px = e.clientX - r.left;
+      let best = xs[0];
+      for (const v of xs) if (Math.abs(X(v) - px) < Math.abs(X(best) - px)) best = v;
+      hair.setAttribute("x1", X(best)); hair.setAttribute("x2", X(best)); hair.setAttribute("visibility", "visible");
+      const rows = [];
+      for (const s of series) {
+        const p = s.points.find((q) => q[0] === best);
+        if (p) rows.push({ color: s.color, value: (opt.tipFmt || opt.yFmt || compact)(p[1]), name: series.length > 1 ? s.name : opt.yName || "" });
+      }
+      showTip(e, (opt.xName || "") + (opt.xTipFmt || opt.xFmt || compact)(best), rows);
+    });
+    hit.addEventListener("pointerleave", () => { hair.setAttribute("visibility", "hidden"); hideTip(); });
+    box.append(root);
+    return {
+      setCursor(v) {
+        const x = m.l + ((v - p0) / ((p1 - p0) || 1)) * (W - m.l - m.r);
+        cursor.setAttribute("x1", x); cursor.setAttribute("x2", x); cursor.setAttribute("visibility", "visible");
+      },
+    };
+  }
+
+  // ---------- 横向条形图 ----------
+  function barChart(box, opt) {
+    box.replaceChildren();
+    box.classList.add("chart");
+    const rows = opt.rows, W = Math.max(240, box.clientWidth);
+    const fmt = opt.fmt || compact;
+    const labW = Math.min(W * 0.48, Math.max(...rows.map((r) => textW(r.label, 12))) + 12);
+    const valW = Math.max(...rows.map((r) => textW(fmt(r.value), 12))) + 10;
+    const rowH = 30, barH = 18, H = rows.length * rowH + 4;
+    const max = opt.max || Math.max(...rows.map((r) => r.value)) || 1;
+    const root = svg("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": opt.aria || "" });
+    svg("line", { x1: labW, x2: labW, y1: 0, y2: H, stroke: css("--axis"), "stroke-width": 1, "shape-rendering": "crispEdges" }, root);
+    rows.forEach((r, i) => {
+      const y = i * rowH + (rowH - barH) / 2 + 2;
+      const w = Math.max(2, (r.value / max) * (W - labW - valW - 4));
+      const lab = svg("text", { x: labW - 8, y: y + barH / 2 + 4, "text-anchor": "end", "font-size": 12, fill: css("--ink-2") }, root);
+      lab.textContent = r.label;
+      const rad = Math.min(4, w);
+      const x0 = labW + 1;
+      svg("path", { d: `M${x0},${y}h${w - rad}a${rad},${rad} 0 0 1 ${rad},${rad}v${barH - 2 * rad}a${rad},${rad} 0 0 1 -${rad},${rad}h-${w - rad}z`,
+        fill: r.accent ? (opt.color || css("--s1")) : css("--bar-muted") }, root);
+      const v = svg("text", { x: x0 + w + 6, y: y + barH / 2 + 4, "font-size": 12, fill: css("--ink"), "font-weight": r.accent ? 650 : 400, style: "font-variant-numeric:tabular-nums" }, root);
+      v.textContent = fmt(r.value);
+      const hit = svg("rect", { x: 0, y: i * rowH, width: W, height: rowH, fill: "transparent" }, root);
+      hit.addEventListener("pointermove", (e) => showTip(e, r.label, [{ value: fmt(r.value), name: r.tip || opt.name || "" }]));
+      hit.addEventListener("pointerleave", hideTip);
+    });
+    box.append(root);
+  }
+
+  // ---------- 头部：测试状态 ----------
+  const meta = $("#meta");
+  if (D.tests && D.tests.cpp) meta.append(el("span", { class: "chip" }, el("span", { class: "ok" }, "✓"), "C++ 单测 ", el("b", {}, `${D.tests.cpp.passed}/${D.tests.cpp.total}`)));
+  if (D.tests && D.tests.py) meta.append(el("span", { class: "chip" }, el("span", { class: "ok" }, "✓"), "Python 单测 ", el("b", {}, `${D.tests.py.passed}/${D.tests.py.total}`)));
+  meta.append(el("span", { class: "chip" }, "生成于 ", el("b", {}, D.generated_at)));
+  const themeBtn = el("button", { class: "chip", type: "button" }, "切换深色/浅色");
+  themeBtn.addEventListener("click", () => {
+    const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+    const cur = document.documentElement.getAttribute("data-theme") || (dark ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+    rerender();
+  });
+  meta.append(themeBtn);
+
+  // ---------- KPI ----------
+  const S = D.sim;
+  const e1 = S.exp1_paging, e2 = S.exp2_prefix, e3 = S.exp3_watermark, e4 = S.exp4_block_size, e5 = S.exp5_lru;
+  const contig = e1[0], oracle = e1[1], paged = e1[2], pagedWm = e1[3];
+  const kpis = $("#kpis");
+  function tile(cls, label, value, unit, delta) {
+    kpis.append(el("div", { class: "tile " + cls },
+      el("div", { class: "label" }, label),
+      el("div", { class: "value" }, value, unit ? el("small", {}, " " + unit) : null),
+      delta ? el("div", { class: "delta" }, ...delta) : null));
+  }
+  tile("hero", "分页分配的吞吐上限（对比按最大长度连续预留）", fix(paged.rel_throughput, 2) + "×", "", ["平均 batch ", el("b", {}, `${fix(contig.avg_batch)} → ${fix(paged.avg_batch)}`)]);
+  tile("", "占用显存里被浪费的比例", pct(paged.waste), "", ["连续预留是 ", el("b", {}, pct(contig.waste))]);
+  tile("", "前缀缓存再提升", fix(e2[1].rel_throughput, 2) + "×", "", [`共享 ${S.config.shared_prefix} token system prompt`]);
+  tile("", "1% 准入水位线：抢占次数", int(pagedWm.preemptions), "", ["原来 ", el("b", {}, int(paged.preemptions)), `，吞吐 ${fix(pagedWm.rel_throughput, 2)}× 不变`]);
+  tile("", "LRU 延迟驱逐：前缀命中率", pct(e5[2].hit_rate), "", ["立即失效时 ", el("b", {}, pct(e5[1].hit_rate))]);
+
+  // ---------- 显存回放 ----------
+  const T = D.trace;
+  const ALPH = T.alphabet, COLS = 32;
+  const decode = new Int16Array(128).fill(0);
+  for (let i = 0; i < ALPH.length; i++) decode[ALPH.charCodeAt(i)] = i;
+  const SCENES = {
+    paging: { label: "连续预留 vs 分页", desc: `同样 ${int(T.config.capacity_tokens)} token 的 KV cache、同样 ${T.config.requests} 个请求（prompt 32~1024、输出 16~1024 token 随机）。左边按 max_model_len=${T.config.max_model_len} 给每个请求预留一整段连续显存：深色是真正写了 token 的格子，同色的浅色是预留了但还空着的。右边每 16 个 token 按需分配一块，物理块不需要连续。` },
+    prefix: { label: "前缀缓存", desc: `所有请求共享 ${T.config.shared_prefix} token 的 system prompt。左边每个请求都存一份自己的 system prompt；右边开启前缀缓存，紫色格子是被多个请求共享的前缀块，只存一份，省下来的显存能多放请求。` },
+  };
+  const OWNER = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6", "--s8"];
+  let scene = "paging", step = 1, playing = !matchMedia("(prefers-reduced-motion: reduce)").matches, speed = 1, lanes = [], raceChart = null;
+  const BASE_SPS = 320;  // 1× 速度下每秒播放多少步
+
+  function hexA(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+  function palette() {
+    const owners = OWNER.map((v) => css(v));
+    return {
+      free: css("--cell-free"), shared: css("--s7"), surface: css("--surface"), ink: css("--ink"),
+      owner: owners.map((c) => [hexA(c, 0.2), hexA(c, 0.62), c]),
+      cached: hexA(css("--s7"), 0.32),
+    };
+  }
+  let PAL = palette();
+
+  function frameAt(run, s) {
+    const f = run.frames;
+    let lo = 0, hi = f.length - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (f[mid].s <= s) lo = mid; else hi = mid - 1; }
+    return f[lo];
+  }
+  function buildScene() {
+    const arena = $("#arena");
+    arena.replaceChildren();
+    $("#scene-desc").textContent = SCENES[scene].desc;
+    const sc = T.scenes.find((x) => x.id === scene);
+    lanes = sc.runs.map((run) => {
+      const canvas = el("canvas", { role: "img", "aria-label": run.name + " 显存占用动画" });
+      const vals = {};
+      const stats = el("div", { class: "stats" });
+      for (const [k, label] of [["r", "运行中请求"], ["d", "已完成"], ["u", "显存占用"], ["w", "占用中浪费"]]) {
+        const v = el("div", { class: "v" }, "—");
+        vals[k] = v;
+        stats.append(el("div", { class: "stat" }, el("div", { class: "k" }, label), v));
+      }
+      arena.append(el("div", { class: "lane" }, el("h4", {}, run.name), canvas, stats));
+      return { run, canvas, vals, lastKey: "" };
+    });
+    const maxStep = Math.max(...sc.runs.map((r) => r.total_steps));
+    const scrub = $("#scrub");
+    scrub.max = maxStep;
+    step = Math.min(step, maxStep);
+    // 进度赛跑图：已完成请求数随步数增长
+    const raceBox = $("#race");
+    const colors = ["--s2", "--s1"];
+    const draw = (box) => {
+      raceChart = lineChart(box, {
+        series: sc.runs.map((r, i) => ({ name: r.name, short: i ? "分页" + (scene === "prefix" ? "+前缀" : "") : (scene === "prefix" ? "无前缀缓存" : "连续预留"), color: css(colors[i]),
+          points: r.frames.map((f) => [f.s, f.d]).concat([[r.total_steps, T.config.requests]]) })),
+        markers: false, height: 170, xMin: 0, xMax: maxStep, yMax: T.config.requests, xLabel: "模拟步数（每步每个运行中的请求生成 1 个 token）",
+        xName: "第 ", xTipFmt: (v) => int(v) + " 步", yFmt: (v) => int(v), tipFmt: (v) => int(v) + " 个请求完成", aria: "已完成请求数随步数变化",
+      });
+      raceChart.setCursor(step);
+    };
+    renderers.race = draw;
+    draw(raceBox);
+    drawLanes(true);
+  }
+  function drawLane(L, force) {
+    const f = frameAt(L.run, step);
+    const finished = step >= L.run.total_steps;
+    const key = f.s + (finished ? "F" : "") + PAL.free;
+    if (!force && key === L.lastKey) return;
+    L.lastKey = key;
+    const c = L.canvas, dpr = window.devicePixelRatio || 1;
+    const W = c.clientWidth || 300, rows = Math.ceil(T.cells / COLS);
+    const gap = W < 360 ? 1 : 2, cell = (W - gap * (COLS - 1)) / COLS, H = rows * cell + gap * (rows - 1);
+    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.height = H + "px"; }
+    const g = c.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    const grid = f.g;
+    for (let i = 0; i < T.cells; i++) {
+      const v = decode[grid.charCodeAt(i)], st = (v / 10) | 0, col = v % 10;
+      let fill;
+      if (st === 0) fill = PAL.free;
+      else if (st <= 3) fill = PAL.owner[col % PAL.owner.length][st - 1];
+      else if (st === 4) fill = PAL.shared;
+      else fill = PAL.cached;
+      g.fillStyle = fill;
+      const x = (i % COLS) * (cell + gap), y = ((i / COLS) | 0) * (cell + gap);
+      g.beginPath();
+      if (g.roundRect) g.roundRect(x, y, cell, cell, Math.min(2, cell / 4)); else g.rect(x, y, cell, cell);
+      g.fill();
+    }
+    if (finished) {
+      g.fillStyle = hexA(PAL.surface.length === 7 ? PAL.surface : "#fcfcfb", 0.86);
+      g.fillRect(0, 0, W, H);
+      g.fillStyle = PAL.ink;
+      g.textAlign = "center";
+      g.font = `600 ${Math.max(14, W / 22)}px system-ui, -apple-system, "PingFang SC", sans-serif`;
+      g.fillText(`✓ ${T.config.requests} 个请求全部完成`, W / 2, H / 2 - 6);
+      g.font = `${Math.max(12, W / 30)}px system-ui, -apple-system, "PingFang SC", sans-serif`;
+      g.fillText(`用了 ${int(L.run.total_steps)} 步`, W / 2, H / 2 + Math.max(16, W / 22));
+    }
+    const done = finished ? T.config.requests : f.d;
+    L.vals.r.textContent = finished ? "0" : String(f.r);
+    L.vals.d.textContent = `${done}/${T.config.requests}`;
+    L.vals.u.textContent = finished ? "—" : pct(f.u, 0);
+    L.vals.w.textContent = finished || !f.u ? "—" : pct(1 - f.st / f.u, 0);
+  }
+  function drawLanes(force) {
+    for (const L of lanes) drawLane(L, force);
+    const sc = T.scenes.find((x) => x.id === scene);
+    const maxStep = Math.max(...sc.runs.map((r) => r.total_steps));
+    $("#scrub").value = Math.round(step);
+    $("#stepno").textContent = `第 ${int(step)} / ${int(maxStep)} 步`;
+    if (raceChart) raceChart.setCursor(step);
+  }
+  const tabs = $("#tabs");
+  for (const [id, s] of Object.entries(SCENES)) {
+    const b = el("button", { class: "tab", role: "tab", type: "button", "aria-selected": String(id === scene) }, s.label);
+    b.addEventListener("click", () => {
+      scene = id; step = 1; playing = true; $("#play").textContent = "暂停";
+      for (const t of tabs.children) t.setAttribute("aria-selected", String(t === b));
+      buildScene();
+    });
+    tabs.append(b);
+  }
+  const speeds = $("#speeds");
+  for (const sp of [0.5, 1, 2, 4]) {
+    const b = el("button", { class: "ctl", type: "button", "aria-pressed": String(sp === speed) }, sp + "×");
+    b.addEventListener("click", () => { speed = sp; for (const x of speeds.children) x.setAttribute("aria-pressed", String(x === b)); });
+    speeds.append(b, " ");
+  }
+  $("#play").addEventListener("click", () => {
+    const sc = T.scenes.find((x) => x.id === scene);
+    const maxStep = Math.max(...sc.runs.map((r) => r.total_steps));
+    if (!playing && step >= maxStep) step = 1;
+    playing = !playing;
+    $("#play").textContent = playing ? "暂停" : "播放";
+  });
+  $("#restart").addEventListener("click", () => { step = 1; playing = true; $("#play").textContent = "暂停"; drawLanes(true); });
+  $("#scrub").addEventListener("input", (e) => { step = +e.target.value; playing = false; $("#play").textContent = "播放"; drawLanes(false); });
+  if (!playing) $("#play").textContent = "播放";
+  const cellLegend = $("#cell-legend");
+  function buildCellLegend() {
+    const o = PAL.owner[0];
+    cellLegend.replaceChildren(...[
+      [PAL.free, "空闲"], [o[0], "已预留但没写入（浪费）"], [o[1], "写了一部分的块"], [o[2], "写满的块（颜色只用来区分相邻的请求）"],
+      [PAL.shared, "多个请求共享的前缀块"],
+    ].map(([c, t]) => el("span", {}, el("span", { class: "sw", style: `background:${c}` }), t)));
+  }
+  buildCellLegend();
+  let lastTs = 0;
+  function tick(ts) {
+    const dt = lastTs ? Math.min(0.1, (ts - lastTs) / 1000) : 0;
+    lastTs = ts;
+    if (playing) {
+      const sc = T.scenes.find((x) => x.id === scene);
+      const maxStep = Math.max(...sc.runs.map((r) => r.total_steps));
+      step = Math.min(maxStep, step + dt * BASE_SPS * speed);
+      if (step >= maxStep) { playing = false; $("#play").textContent = "重播"; }
+      drawLanes(false);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ---------- 模拟实验卡片 ----------
+  $("#sim-sub").textContent = `KV cache 容量 ${int(S.config.capacity_tokens)} token（Qwen2.5-7B BF16 每 token 约 56KB，相当于 3.5GB），${int(S.config.requests)} 个请求，prompt 32~${S.config.max_model_len / 2}、输出 16~${S.config.max_model_len / 2} token 随机，max_model_len=${S.config.max_model_len}，块大小 ${S.config.block_size}，max_num_seqs=${S.config.max_num_seqs}，随机种子 ${S.config.seed}。数字来自 ./kv_sim 的原始输出（results/sim.json）。`;
+  const simCards = $("#sim-cards");
+  const shortName = (n) => n.replace("(PagedAttention 方式)", "").replace("(按 max_model_len)", "·按最大长度").replace("(已知输出长度,理想上限)", "·已知输出长度");
+  const e1rows = (key, fmt) => e1.map((r) => ({ label: shortName(r.name), value: r[key], accent: r.name.startsWith("分页"), tip: fmt ? fmt(r[key]) : "" }));
+  const tbl1 = {
+    cols: ["策略", "总步数", "平均 batch", "相对吞吐", "显存占用率", "浪费比例", "抢占", "外部碎片拒绝", "重算 token"],
+    rows: e1.map((r) => [r.name, int(r.steps), fix(r.avg_batch), fix(r.rel_throughput, 2) + "×", pct(r.mem_used), pct(r.waste), int(r.preemptions), int(r.frag_rejects), int(r.recompute_tokens)]),
+  };
+  let b = card(simCards, { title: "实验一 · 平均 batch（越大越好）", sub: "同样显存下，每步平均有多少个请求在一起 decode", table: tbl1 });
+  mount(b, (box) => barChart(box, { rows: e1rows("avg_batch"), fmt: (v) => fix(v), name: "平均 batch" }));
+  b = card(simCards, { title: "实验一 · 占用显存里被浪费的比例（越小越好）", sub: "预留了但没存 token 的槽位 ÷ 被占用的槽位", table: tbl1 });
+  mount(b, (box) => barChart(box, { rows: e1rows("waste"), fmt: (v) => pct(v), name: "浪费比例", max: 1 }));
+  b = card(simCards, {
+    title: `实验二 · 前缀缓存（共享 ${S.config.shared_prefix} token system prompt）`, sub: `前缀命中 ${int(e2[1].prefix_hit_blocks)} 块，平均 batch ${fix(e2[0].avg_batch)} → ${fix(e2[1].avg_batch)}`,
+    table: { cols: ["策略", "总步数", "平均 batch", "相对吞吐", "抢占", "前缀命中块"], rows: e2.map((r) => [r.name, int(r.steps), fix(r.avg_batch), fix(r.rel_throughput, 2) + "×", int(r.preemptions), int(r.prefix_hit_blocks)]) },
+  });
+  mount(b, (box) => barChart(box, { rows: e2.map((r) => ({ label: r.name.replace("(PagedAttention 方式)", ""), value: r.rel_throughput, accent: r.name.includes("前缀") })), fmt: (v) => fix(v, 2) + "×", name: "相对吞吐" }));
+  b = card(simCards, {
+    title: "结论", sub: "",
+  });
+  b.append(
+    el("p", { class: "note" }, `连续预留按最大长度占坑：显存看着 ${pct(contig.mem_used, 0)} 满了，其中 ${pct(contig.waste, 0)} 其实是空的。即使提前知道输出长度，也会因为外部碎片（总空间够、但找不到连续一段）被拒绝 ${int(oracle.frag_rejects)} 次。`),
+    el("p", { class: "note" }, `分页分配只浪费每个序列最后一块没写满的部分（${pct(paged.waste)}），同样显存能同时跑 ${fix(paged.rel_throughput, 2)} 倍的请求；代价是显存吃紧时要抢占，被抢占的请求要重算 ${int(paged.recompute_tokens)} 个 token（模拟器没把它折算成时间，所以这个倍数偏乐观）。`),
+    el("p", { class: "note" }, `有公共前缀时，前缀缓存让请求共享同一份 KV，平均 batch 再提升 ${pct(e2[1].rel_throughput - 1, 0)}。`),
+  );
+
+  // ---------- 改进卡片 ----------
+  const imp = $("#improve-cards");
+  const wmRows = e3.map((r) => [r.watermark * 100, r]);
+  b = card(imp, {
+    title: "准入水位线：用一点吞吐换少得多的抢占", sub: `分页 + 前缀缓存，负载同实验二。水位线 = 放进新请求后至少要剩的空闲块比例`,
+    table: { cols: ["水位线", "平均 batch", "相对吞吐", "抢占次数", "重算 token", "重算占 prefill"], rows: e3.map((r) => [pct(r.watermark), fix(r.avg_batch), fix(r.rel_throughput, 3) + "×", int(r.preemptions), int(r.recompute_tokens), pct(r.recompute_tokens / r.prefill_tokens)]) },
+  });
+  b.append(el("div", { class: "multi" }, el("div", {}, el("p", { class: "mini-t" }, "抢占次数"), el("div", { "data-k": "a" })), el("div", {}, el("p", { class: "mini-t" }, "相对吞吐（对比不设水位线）"), el("div", { "data-k": "b" }))));
+  const wmCommon = { ordinal: true, height: 170, xFmt: (v) => v + "%", xName: "水位线 ", xLabel: "水位线" };
+  mount($('[data-k="a"]', b), (box) => lineChart(box, { ...wmCommon, series: [{ name: "抢占次数", color: css("--s1"), points: wmRows.map(([x, r]) => [x, r.preemptions]) }], yFmt: (v) => int(v), yName: "次抢占" }));
+  mount($('[data-k="b"]', b), (box) => lineChart(box, { ...wmCommon, series: [{ name: "相对吞吐", color: css("--s1"), points: wmRows.map(([x, r]) => [x, r.rel_throughput]) }], yMin: 0.8, yFmt: (v) => fix(v, 2) + "×", yName: "相对吞吐" }));
+  const w1 = e3.find((r) => Math.abs(r.watermark - 0.01) < 1e-6) || e3[2];
+  b.append(el("p", { class: "note" }, `1% 水位线：抢占 ${int(e3[0].preemptions)} → ${int(w1.preemptions)} 次（−${pct(1 - w1.preemptions / e3[0].preemptions, 0)}），重算 token ${int(e3[0].recompute_tokens)} → ${int(w1.recompute_tokens)}，吞吐只降 ${pct(1 - w1.rel_throughput)}。无公共前缀的实验一里，1% 水位线也把抢占从 ${int(paged.preemptions)} 降到 ${int(pagedWm.preemptions)} 次，吞吐仍是 ${fix(pagedWm.rel_throughput, 2)}×。`));
+
+  b = card(imp, {
+    title: "LRU 延迟驱逐：请求结束后前缀还能被命中", sub: `${S.config.tenants} 个应用各有 ${S.config.tenant_prefix} token system prompt，按 Zipf 分布访问，max_num_seqs=${S.config.tenant_max_seqs}`,
+    table: { cols: ["策略", "前缀命中率", "需要 prefill 的 token", "相对无缓存", "驱逐块数"], rows: e5.map((r) => [r.name, pct(r.hit_rate), int(r.prefill_tokens), fix(r.prefill_tokens / e5[0].prefill_tokens, 2) + "×", int(r.evicted_blocks)]) },
+  });
+  b.append(el("p", { class: "mini-t" }, "前缀命中率（命中的 token ÷ 输入 token）"), el("div", { "data-k": "a" }), el("p", { class: "mini-t" }, "需要真正计算 prefill 的 token 数"), el("div", { "data-k": "b" }));
+  const lruName = (n) => n.replace("(引用归零立即失效)", "·立即失效").replace(" + LRU 延迟驱逐", " + LRU").replace("分页(无前缀缓存)", "无前缀缓存");
+  mount($('[data-k="a"]', b), (box) => barChart(box, { rows: e5.map((r, i) => ({ label: lruName(r.name), value: r.hit_rate, accent: i === 2 })), fmt: (v) => pct(v), max: 1, name: "前缀命中率" }));
+  mount($('[data-k="b"]', b), (box) => barChart(box, { rows: e5.map((r, i) => ({ label: lruName(r.name), value: r.prefill_tokens, accent: i === 2 })), fmt: (v) => compact(v), name: "prefill token" }));
+  b.append(el("p", { class: "note" }, `引用计数归零的缓存块先放进 LRU 队列，仍可被命中；只有没有空闲块时才驱逐最久没用的。命中率 ${pct(e5[1].hit_rate)} → ${pct(e5[2].hit_rate)}，需要 prefill 的 token 再少 ${pct(1 - e5[2].prefill_tokens / e5[1].prefill_tokens, 0)}。`));
+
+  b = card(imp, {
+    title: "块大小：为什么 vLLM 默认选 16", sub: "分页，负载同实验一。块越大，最后一块没写满的浪费越多；块越小，块表越长、GPU kernel 每次读的数据越碎", wide: true,
+    table: { cols: ["块大小", "平均 batch", "相对吞吐(对比连续预留)", "浪费比例", "抢占", "平均块表长度"], rows: e4.map((r) => [r.block_size, fix(r.avg_batch), fix(r.rel_throughput, 2) + "×", pct(r.waste), int(r.preemptions), fix(r.avg_table_len)]) },
+  });
+  b.append(el("div", { class: "multi" },
+    el("div", {}, el("p", { class: "mini-t" }, "占用中被浪费的比例"), el("div", { "data-k": "a" })),
+    el("div", {}, el("p", { class: "mini-t" }, "平均每个序列的块表长度"), el("div", { "data-k": "b" })),
+    el("div", {}, el("p", { class: "mini-t" }, "相对吞吐（对比连续预留）"), el("div", { "data-k": "c" }))));
+  const bsCommon = { xLog: true, height: 170, xFmt: (v) => String(v), xName: "块大小 ", xLabel: "块大小（token，对数刻度）" };
+  mount($('[data-k="a"]', b), (box) => lineChart(box, { ...bsCommon, series: [{ name: "浪费比例", color: css("--s1"), points: e4.map((r) => [r.block_size, r.waste]) }], yFmt: (v) => pct(v, 0), tipFmt: (v) => pct(v), yName: "浪费" }));
+  mount($('[data-k="b"]', b), (box) => lineChart(box, { ...bsCommon, series: [{ name: "块表长度", color: css("--s1"), points: e4.map((r) => [r.block_size, r.avg_table_len]) }], yFmt: (v) => compact(v), tipFmt: (v) => fix(v) + " 项", yName: "块表长度" }));
+  mount($('[data-k="c"]', b), (box) => lineChart(box, { ...bsCommon, series: [{ name: "相对吞吐", color: css("--s1"), points: e4.map((r) => [r.block_size, r.rel_throughput]) }], yMin: 1, yFmt: (v) => fix(v, 1) + "×", tipFmt: (v) => fix(v, 2) + "×", yName: "相对吞吐" }));
+  const bs16 = e4.find((r) => r.block_size === 16), bs256 = e4.find((r) => r.block_size === 256), bs1 = e4.find((r) => r.block_size === 1);
+  if (bs16 && bs256 && bs1) b.append(el("p", { class: "note" }, `块大小 1 时浪费是 0，但每个序列平均要维护 ${fix(bs1.avg_table_len, 0)} 项块表；16 时浪费 ${pct(bs16.waste)}、块表 ${fix(bs16.avg_table_len, 0)} 项；256 时浪费涨到 ${pct(bs256.waste)}，吞吐从 ${fix(bs16.rel_throughput, 2)}× 掉到 ${fix(bs256.rel_throughput, 2)}×。`));
+
+  // ---------- 压测（mock） ----------
+  const mockCards = $("#mock-cards");
+  function sweepCharts(parent, data, tags, colorOf, nameOf, title) {
+    const series = (key) => tags.filter((t) => data[t]).map((t) => ({ name: nameOf(t), color: css(colorOf(t)), points: data[t].map((r) => [r.concurrency, r[key]]) }));
+    const tableRows = [];
+    for (const t of tags) for (const r of data[t] || []) tableRows.push([nameOf(t), r.concurrency, fix(r.output_throughput), fix(r.request_throughput, 2), fix(r.p50_ttft_ms, 0), fix(r.p95_ttft_ms, 0), fix(r.p50_tpot_ms), fix(r.p95_e2e_ms, 0), fix(r.littles_law_concurrency || 0, 2)]);
+    const table = { cols: ["配置", "并发", "输出吞吐 tok/s", "请求/s", "P50 TTFT ms", "P95 TTFT ms", "P50 TPOT ms", "P95 E2E ms", "Little 定律并发"], rows: tableRows };
+    const bb = card(parent, { title, sub: "横轴是并发数（对数刻度）", wide: true, table });
+    const legendItems = tags.filter((t) => data[t]);
+    if (legendItems.length >= 2) bb.append(legend(legendItems.map((t) => ({ name: nameOf(t), color: css(colorOf(t)) }))));
+    const box = el("div", { class: "multi quad" });
+    bb.append(box);
+    const common = { xLog: true, height: 180, xFmt: (v) => String(v), xName: "并发 ", legend: false, endLabels: false };
+    const panels = [["output_throughput", "输出吞吐（tok/s）", (v) => fix(v, 0) + " tok/s"], ["p95_ttft_ms", "P95 TTFT（ms）", (v) => fix(v, 1) + " ms"], ["p50_tpot_ms", "P50 TPOT（ms）", (v) => fix(v, 1) + " ms"]];
+    // 先把 4 个格子都放进网格，再画图：否则第一张图量宽度时网格里只有它一个，会量成整行宽
+    const cells = [...panels.map((p) => p[1]), "吞吐-延迟权衡（横轴吞吐，纵轴 P50 TPOT，越靠右下越好）"].map((t) => {
+      const c = el("div", {}, el("p", { class: "mini-t" }, t), el("div", {}));
+      box.append(c);
+      return c.lastChild;
+    });
+    panels.forEach(([key, t, f], i) => mount(cells[i], (bx) => lineChart(bx, { ...common, series: series(key), yFmt: compact, tipFmt: f, yName: t })));
+    mount(cells[3], (bx) => lineChart(bx, {
+      height: 180, legend: false, endLabels: false, xName: "", xFmt: compact, xTipFmt: (v) => fix(v, 0) + " tok/s", yFmt: (v) => fix(v, 0), tipFmt: (v) => fix(v, 1) + " ms",
+      series: tags.filter((t) => data[t]).map((t) => ({ name: nameOf(t), color: css(colorOf(t)), points: data[t].map((r) => [r.output_throughput, r.p50_tpot_ms]) })),
+    }));
+  }
+  const M = D.mock || {};
+  if (M.mock) {
+    sweepCharts(mockCards, M, ["mock"], () => "--s1", () => "mock", "并发扫描 1 → 128（mock 服务，输入 512、输出 128 token）");
+    const ll = M.mock;
+    b = card(mockCards, { title: "Little 定律验算：工具测出来的数自洽吗", sub: "请求吞吐 × 平均 E2E 延迟 ≈ 同时在飞的请求数，闭环压测时应该落在 y = x 这条线上",
+      table: { cols: ["设定并发", "吞吐 × 平均延迟", "误差"], rows: ll.map((r) => [r.concurrency, fix(r.littles_law_concurrency, 2), pct(r.littles_law_concurrency / r.concurrency - 1)]) } });
+    b.append(el("div", { class: "legend" },
+      el("span", {}, el("span", { class: "key-line", style: `background:${css("--s1")}` }), "请求吞吐 × 平均 E2E（实测）"),
+      el("span", {}, el("span", { class: "key-line", style: `background:${css("--muted")}` }), "y = x（设定的并发数）")));
+    const llBox = el("div", {});
+    b.append(llBox);
+    mount(llBox, (box) => lineChart(box, { xLog: true, height: 190, xFmt: String, xName: "并发 ", yFmt: compact, tipFmt: (v) => fix(v, 2) + " 个在飞", endLabels: false,
+      ref: (x) => x,
+      series: [{ name: "吞吐 × 平均延迟", color: css("--s1"), points: ll.map((r) => [r.concurrency, r.littles_law_concurrency]) }], yName: "吞吐 × 平均延迟" }));
+    b.append(el("p", { class: "note" }, `横轴是对数刻度，所以 y = x 是一条曲线。实测点和它的最大偏差是 ${pct(Math.max(...ll.map((r) => Math.abs(r.littles_law_concurrency / r.concurrency - 1))))}，说明 TTFT、E2E 和吞吐的统计口径是一致的；如果明显偏下，通常是客户端线程跟不上或者有请求失败。`));
+  }
+  if (M["mock-prefix-off"] && M["mock-prefix-on"]) {
+    const tags = ["mock-prefix-off", "mock-prefix-on"], nm = (t) => (t.endsWith("on") ? "前缀缓存开" : "前缀缓存关"), co = (t) => (t.endsWith("on") ? "--s2" : "--s1");
+    b = card(mockCards, { title: "前缀缓存流程验证（mock）", sub: "1024 词共享前缀 + 各自 256 词；mock 服务按 16 词一块做哈希链，命中部分不计 prefill 时间",
+      table: { cols: ["配置", "并发", "P50 TTFT ms", "输出吞吐"], rows: tags.flatMap((t) => M[t].map((r) => [nm(t), r.concurrency, fix(r.p50_ttft_ms, 1), fix(r.output_throughput, 0)])) } });
+    mount(b, (box) => lineChart(box, { xLog: true, height: 190, xFmt: String, xName: "并发 ", yFmt: compact, tipFmt: (v) => fix(v, 1) + " ms",
+      series: tags.map((t) => ({ name: nm(t), short: nm(t).replace("前缀缓存", ""), color: css(co(t)), points: M[t].map((r) => [r.concurrency, r.p50_ttft_ms]) })), yName: "P50 TTFT" }));
+    b.append(el("p", { class: "note" }, "纵轴是 P50 TTFT（ms）。只说明 bench.py → report.py 这条流程能算出 TTFT 下降比例，具体数值没有意义。"));
+  }
+  if (!M.mock) $("#mock-badge").textContent = "还没有 mock 数据：bash scripts/mock_bench.sh";
+
+  // ---------- GPU ----------
+  const gpu = $("#gpu"), G = D.gpu || {}, H = D.headline;
+  const QT = ["fp16", "awq", "gptq-int8", "kv-fp8"], QC = { fp16: "--s1", awq: "--s2", "gptq-int8": "--s3", "kv-fp8": "--s4" };
+  const QN = { fp16: "BF16", awq: "AWQ-INT4", "gptq-int8": "GPTQ-INT8", "kv-fp8": "FP8 KV cache" };
+  if (QT.some((t) => G[t]) || (G["prefix-off"] && G["prefix-on"])) {
+    const g2 = el("div", { class: "grid2" });
+    gpu.append(g2);
+    if (QT.some((t) => G[t])) sweepCharts(g2, G, QT, (t) => QC[t], (t) => QN[t], "量化对比：BF16 / AWQ-INT4 / GPTQ-INT8 / FP8 KV cache");
+    if (G["prefix-off"] && G["prefix-on"]) sweepCharts(g2, G, ["prefix-off", "prefix-on"], (t) => (t === "prefix-on" ? "--s2" : "--s1"), (t) => (t === "prefix-on" ? "前缀缓存开" : "前缀缓存关"), "前缀缓存：1024 token 共享前缀");
+    if (H && H.resume && H.resume.length) {
+      const c = card(g2, { title: "可以写进简历的结论", sub: "由 bench/report.py 从上面的数据自动生成", wide: true });
+      c.append(el("ul", { class: "resume" }, ...H.resume.map((s) => el("li", {}, s))));
+    }
+  } else {
+    gpu.append(el("div", { class: "todo" },
+      el("h3", {}, "还没有 GPU 数据"),
+      el("p", { class: "note" }, "这一节需要一台 RTX 4090（AutoDL 之类按小时租即可，跑完全部实验约 2~4 小时）。跑完后重新生成本页，这里会自动出现量化对比和前缀缓存的曲线，以及由真实数据生成的简历句子。"),
+      el("pre", {}, "pip install vllm\nbash serve/download_models.sh\ntmux new -s bench\nbash serve/run_all.sh          # 结果写到 results/results.jsonl，vLLM 日志在 logs/\npython3 bench/report.py        # 提取关键数字 + 简历句子\npython3 dashboard/build.py     # 重新生成本页")));
+  }
+
+  $("#footer").append("复现：", el("code", {}, "bash scripts/run_local.sh"), "（编译 → 单测 → 模拟器 → mock 压测 → 生成本页）。数据文件在 results/，本页由 dashboard/build.py 生成，不依赖任何网络资源。");
+
+  // ---------- 重新渲染（窗口大小 / 深浅色变化） ----------
+  function rerender() {
+    PAL = palette();
+    buildCellLegend();
+    for (const r of renderers) r();
+    if (renderers.race) renderers.race($("#race"));
+    drawLanes(true);
+  }
+  let rt;
+  addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(rerender, 120); });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", rerender);
+
+  buildScene();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
