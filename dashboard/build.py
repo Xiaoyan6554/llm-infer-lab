@@ -61,6 +61,22 @@ def parse_tests(p: Path) -> dict:
     return out
 
 
+def env_summary(p: Path) -> str:
+    """把 run_all.sh 记录的 env.txt 压成一行：GPU、驱动、vLLM / torch / CUDA 版本。"""
+    if not p.exists():
+        return ""
+    lines = [l.strip() for l in p.read_text(encoding="utf-8", errors="replace").splitlines()]
+    gpu = next((l for l in lines if l.startswith("NVIDIA ") and "," in l), "")
+    ver = next((l for l in lines if l.startswith("vllm ")), "")
+    parts = []
+    if gpu:
+        name, driver = [x.strip() for x in gpu.split(",")[:2]]
+        parts.append(f"{name.replace('NVIDIA GeForce ', '')}，驱动 {driver}")
+    if ver:
+        parts.append(ver.replace(" | ", "，"))
+    return "；".join(parts)
+
+
 def main() -> None:
     sim, trace = load_json(RES / "sim.json"), load_json(RES / "trace.json")
     if not sim or not trace:
@@ -74,6 +90,7 @@ def main() -> None:
         "mock": load_sweeps(RES / "mock" / "results.jsonl"),
         "gpu": {t: v for t, v in gpu.items() if not t.startswith("mock")},
         "headline": load_json(RES / "headline.json"),
+        "env": env_summary(RES / "env.txt"),
     }
     blob = json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     tpl = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8")

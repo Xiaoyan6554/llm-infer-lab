@@ -3,9 +3,9 @@
 用两部分代码，把大模型推理服务里最核心的两件事讲清楚、测清楚：
 
 1. **`kvcache/`（C++17）**：从零实现 PagedAttention 的 KV cache 分页管理器，包括块分配、引用计数、写时复制（Copy-on-Write）、基于哈希链的前缀缓存、LRU 延迟驱逐和准入水位线；配一个调度模拟器，量化"连续预留"和"分页分配"在同样显存下的吞吐差距。
-2. **`bench/`（Python，零依赖）**：OpenAI 兼容接口的流式压测工具，统计 TTFT / TPOT / ITL / 吞吐的 P50/P95/P99，支持闭环固定并发和泊松到达；在 vLLM + Qwen2.5-7B 上对比 BF16、AWQ-INT4、GPTQ-INT8、FP8 KV cache 和前缀缓存。
+2. **`bench/`（Python，零依赖）**：OpenAI 兼容接口的流式压测工具，统计 TTFT / TPOT / ITL / 吞吐的 P50/P95/P99，支持闭环固定并发和泊松到达；在 RTX 4090 D 上用 vLLM + Qwen2.5-7B 实测对比 BF16、AWQ-INT4、GPTQ-INT8、FP8 KV cache 和前缀缓存。
 
-所有结果汇总在一个离线可打开的可视化面板 **`dashboard/index.html`** 里：显存格子动画回放（连续预留 vs 分页、有无前缀缓存）、全部模拟实验图表、压测曲线。
+所有结果汇总在一个离线可打开的可视化面板 **`dashboard/index.html`** 里：显存格子动画回放（连续预留 vs 分页、有无前缀缓存）、全部模拟实验图表、GPU 实测曲线。
 
 ![面板截图](docs/dashboard.jpg)
 
@@ -37,7 +37,8 @@ llm-infer-lab/
 ├── docs/
 │   ├── REPORT.md                  # 实验报告
 │   └── INTERVIEW.md               # 面试问答
-└── results/                       # sim.json / trace.json / 压测 JSONL / 图
+├── logs/                          # GPU 实验的 vLLM 启动日志（KV cache 容量从这里读）
+└── results/                       # sim.json / trace.json / 压测 JSONL / 图 / env.txt
 ```
 
 ## 快速开始
@@ -70,7 +71,7 @@ python3 bench/bench.py --model mock --request-rate 4 --num-prompts 64 --tag mock
 python3 -m unittest discover -s bench
 ```
 
-### 3. 真实 GPU 实验（RTX 4090 24GB）
+### 3. 真实 GPU 实验（RTX 4090 / 4090 D 24GB，单卡约 1 小时）
 
 ```bash
 pip install vllm
@@ -146,9 +147,44 @@ KV cache 容量 65536 token（Qwen2.5-7B BF16 每 token 约 56KB，相当于 3.5
 
 `bash scripts/mock_bench.sh` 在 mock 服务上跑并发 1→128 的扫描，用来验证压测和画图流程，**数字不代表 GPU 性能**。工具自身的口径用 Little 定律检查：闭环压测时"请求吞吐 × 平均 E2E 延迟"和设定并发的偏差在 1% 以内（见面板里的"Little 定律验算"）。
 
-### GPU 实验：vLLM + Qwen2.5-7B-Instruct，RTX 4090
+### GPU 实验：vLLM + Qwen2.5-7B-Instruct，RTX 4090 D
 
-> 待补充：跑完 `serve/run_all.sh` 后，`bench/report.py` 会把关键数字写到 `results/headline.json` 和 `results/report_tables.md`（含 vLLM 日志里的 KV cache 容量），面板会自动出现量化对比和前缀缓存曲线。把表格和结论整理进 [docs/REPORT.md](docs/REPORT.md)，再把图贴在这里。
+环境：RTX 4090 D 24GB（AutoDL 按小时租用），驱动 595.71.05，vLLM 0.32.0，torch 2.13.0 + CUDA 13.0；`max_model_len=4096`、`gpu_memory_utilization=0.9`、`max_num_seqs=256`。压测：输入 512 token、输出 256 token（`ignore_eos`），闭环并发 1→128，每轮请求数 = 并发 × 4（至少 32）。6 个配置 × 8 档并发共 48 轮，全部请求成功；47 轮的 Little 定律偏差在 1% 以内（唯一例外见下）。原始数据：`results/results.jsonl`、`logs/`，汇总表 `results/report_tables.md`。
+
+#### 量化对比
+
+![量化对比](results/quantization.png)
+
+| 配置 | 权重显存 | KV 容量（压测时） | KV 容量（缓存命中后） | 并发 1 P50 TPOT | 并发 16 输出吞吐 | 并发 128 输出吞吐 |
+|---|---|---|---|---|---|---|
+| BF16 | 14.29 GiB | 96,880 | 111,328 | 15.4 ms | 810 tok/s | 2,439 tok/s |
+| AWQ-INT4 | 5.29 GiB | 263,792 | — | **5.7 ms** | **1,648** | **2,689** |
+| GPTQ-INT8 | 8.29 GiB | 208,496 | — | 9.0 ms | 1,183 | 2,389 |
+| BF16 + FP8 KV cache | 14.29 GiB | 180,752 | **209,648** | 15.3 ms | 825 | 2,681 |
+
+KV 容量来自 vLLM 启动日志的 `GPU KV cache size`。"压测时"是每个配置第一次启动：torch.compile 从头编译会多占一些显存，留给 KV cache 的空间不完全一样（BF16 5.17 GiB、FP8 4.83 GiB）。所以压测结束后又把 BF16 和 FP8 在编译缓存命中的条件下各启动一次，只记录容量（`logs/warm/`），用这一组做对比。
+
+- **低并发时 decode 是访存瓶颈，实测和理论下限对得上。** 单并发每生成一个 token 都要把权重读一遍，"读取量 ÷ 显存带宽 1008 GB/s"给出 TPOT 下限：BF16 14.0 ms、GPTQ-INT8 7.7 ms、AWQ-INT4 4.4 ms；实测 15.4 / 9.0 / 5.7 ms，带宽利用率约 91% / 86% / 77%。AWQ-INT4 单并发比 BF16 快 2.7 倍。
+- **高并发时转为算力瓶颈，量化优势缩小。** 并发 128 时 AWQ-INT4 吞吐只比 BF16 高 10%；GPTQ-INT8 反而略低，反量化开销在算力瓶颈下显现出来。
+- **FP8 KV cache 每 token 占用从 56 KB 减到 28 KB。** 同条件下 KV 容量 111,328 → 209,648 token（1.88 倍；每 GiB 能放的 token 正好翻倍，不到 2 倍是因为 FP8 配置的 CUDA graph 显存预估 0.75 GiB，比 BF16 多 0.35 GiB）。单并发时 TPOT 不变；并发 128 时 TPOT 48.9 → 44.0 ms、吞吐 +10%，因为大 batch 下每步要读的 KV 约 4.4 GiB（128 个请求 × 平均 640 token × 56 KB），FP8 把这部分读取量减半。
+
+#### 前缀缓存
+
+所有请求共享 1024 token 前缀，各自另有 256 token，输出 256 token。
+
+![前缀缓存](results/prefix_cache.png)
+
+| 并发 | 关闭 P50 TTFT | 开启 P50 TTFT | TTFT 下降 | 关闭输出吞吐 | 开启输出吞吐 | 吞吐提升 |
+|---|---|---|---|---|---|---|
+| 1 | 153 ms | 57 ms | 63% | 63 | 64 | +2% |
+| 4 | 406 ms | 72 ms | 82% | 221 | 248 | +13% |
+| 16 | 758 ms | 146 ms | **81%** | 633 | 892 | **+41%** |
+| 64 | 922 ms | 341 ms | 63% | 1,109 | 2,506 | +126% |
+| 128 | 15,617 ms | 1,140 ms | 93% | 1,064 | 3,384 | +218% |
+
+- **TTFT 下降**：共享的 1024 token 不用每个请求重新 prefill。
+- **吞吐提升随并发变大，原因是显存，和模拟器实验二的结论一致。** 不开前缀缓存时每个请求独占 1536 token 的 KV，111,328 token 只够约 72 个请求同时跑，所以并发 128 时一半请求在排队（P50 TTFT 15.6 秒）。开启后前缀只存一份，128 个请求只需约 6.7 万 token。
+- 唯一一轮 Little 定律偏差超过 1% 的就是这一轮（关闭前缀缓存、并发 128，偏差 −4.8%）：单个请求端到端约 30 秒，压测收尾时在飞请求少于 128 的那段时间占比变大。
 
 ## 设计要点
 

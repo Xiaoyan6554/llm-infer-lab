@@ -61,7 +61,9 @@ def parse_vllm_log(text: str) -> dict:
     m = re.search(r"(?:Model loading took|Loading model weights took)\s*([\d.]+)\s*(GiB|GB)", text)
     if m:
         out["weights_gib"] = float(m.group(1))
-    m = re.search(r"vLLM API server version\s*([0-9][\w.+-]*)", text) or re.search(r"\bvLLM\b.*?\bversion\s+([0-9][\w.+-]*)", text)
+    m = (re.search(r"vLLM API server version\s*([0-9][\w.+-]*)", text)
+         or re.search(r"LLM engine \(v([0-9][\w.+-]*)\)", text)
+         or re.search(r"\bvLLM\b.*?\bversion\s+([0-9][\w.+-]*)", text))
     if m:
         out["vllm_version"] = m.group(1)
     return out
@@ -76,6 +78,15 @@ def load_logs(log_dir: Path) -> dict[str, dict]:
             if info:
                 out[m.group(1)] = {**info, "log": p.name}
     return out
+
+
+def gpu_name(env_file: Path) -> str:
+    """从 run_all.sh 记录的 results/env.txt 里读 GPU 型号（nvidia-smi 输出的第二行）。"""
+    if env_file.exists():
+        for line in env_file.read_text(encoding="utf-8", errors="replace").splitlines():
+            if line.startswith("NVIDIA ") and "," in line:
+                return line.split(",")[0].replace("NVIDIA GeForce ", "").replace("NVIDIA ", "").strip()
+    return "RTX 4090"
 
 
 def fmt(x: float | None, nd: int = 1) -> str:
@@ -106,8 +117,12 @@ def main() -> None:
 
     data = load_results(Path(args.input))
     logs = load_logs(Path(args.logs))
+    # logs/warm/：编译缓存命中后再启动一次、只记录 KV 容量的日志。首次启动时 torch.compile 会多占显存，
+    # 各配置的冷启动条件不完全一样，所以做 KV 容量对比时优先用这一份。
+    warm = load_logs(Path(args.logs) / "warm")
     tp = args.tag_prefix
-    headline: dict = {"source": args.input, "tag_prefix": tp, "quant": {}, "kv": logs, "prefix": None, "resume": []}
+    gpu = gpu_name(Path(args.input).parent / "env.txt")
+    headline: dict = {"source": args.input, "tag_prefix": tp, "gpu": gpu, "quant": {}, "kv": logs, "kv_warm": warm, "prefix": None, "resume": []}
     md: list[str] = []
 
     # ---- 实验一：量化 ----
@@ -128,14 +143,20 @@ def main() -> None:
             md.append(f"| {LABELS.get(t, t)} | {fmt(info.get('weights_gib'), 2)} | {fmt(info.get('kv_cache_tokens'), 0)} | "
                       f"{fmt(info.get('max_concurrency'), 2)} | {info['log']} |")
         md.append("")
+    if warm:
+        md += ["编译缓存命中后再启动一次（`logs/warm/`）：", "", "| 配置 | KV cache 容量 (token) | 最大并发（日志） | 日志文件 |", "|---|---|---|---|"]
+        for t, info in warm.items():
+            md.append(f"| {LABELS.get(t, t)} | {fmt(info.get('kv_cache_tokens'), 0)} | {fmt(info.get('max_concurrency'), 2)} | {info['log']} |")
+        md.append("")
 
     if "fp16" in quant and "awq" in quant and quant["fp16"]["tpot_c1_p50_ms"] and quant["awq"]["tpot_c1_p50_ms"]:
         s = (f"AWQ-INT4 单并发下 TPOT 由 {quant['fp16']['tpot_c1_p50_ms']:.1f} ms 降至 {quant['awq']['tpot_c1_p50_ms']:.1f} ms，"
              f"最高输出吞吐 {quant['awq']['max_output_throughput']:,.0f} tok/s")
-        kv16, kv8 = logs.get("fp16", {}).get("kv_cache_tokens"), logs.get("kv-fp8", {}).get("kv_cache_tokens")
+        src = warm if warm.get("fp16", {}).get("kv_cache_tokens") and warm.get("kv-fp8", {}).get("kv_cache_tokens") else logs
+        kv16, kv8 = src.get("fp16", {}).get("kv_cache_tokens"), src.get("kv-fp8", {}).get("kv_cache_tokens")
         if kv16 and kv8:
             s += f"；FP8 KV cache 使 KV 容量由 {kv16:,} 提升至 {kv8:,} token"
-        headline["resume"].append("量化对比：在 RTX 4090 上对比 BF16、AWQ-INT4、GPTQ-INT8 与 FP8 KV cache：" + s + "。")
+        headline["resume"].append(f"量化对比：在 {gpu} 上对比 BF16、AWQ-INT4、GPTQ-INT8 与 FP8 KV cache：" + s + "。")
 
     # ---- 实验二：前缀缓存 ----
     off, on = data.get(tp + "prefix-off"), data.get(tp + "prefix-on")

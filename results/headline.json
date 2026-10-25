@@ -1,0 +1,188 @@
+{
+  "source": "results/results.jsonl",
+  "tag_prefix": "",
+  "gpu": "RTX 4090 D",
+  "quant": {
+    "fp16": {
+      "tpot_c1_p50_ms": 15.36798470050973,
+      "max_output_throughput": 2438.705256935723,
+      "best_concurrency": 128,
+      "max_throughput_under_slo": 2438.705256935723
+    },
+    "awq": {
+      "tpot_c1_p50_ms": 5.677222731687566,
+      "max_output_throughput": 2689.486607377716,
+      "best_concurrency": 128,
+      "max_throughput_under_slo": 2689.486607377716
+    },
+    "gptq-int8": {
+      "tpot_c1_p50_ms": 8.984967369549707,
+      "max_output_throughput": 2388.905475505682,
+      "best_concurrency": 128,
+      "max_throughput_under_slo": 2259.943588385097
+    },
+    "kv-fp8": {
+      "tpot_c1_p50_ms": 15.267896822964152,
+      "max_output_throughput": 2680.787259947636,
+      "best_concurrency": 128,
+      "max_throughput_under_slo": 2680.787259947636
+    }
+  },
+  "kv": {
+    "awq": {
+      "kv_cache_tokens": 263792,
+      "max_concurrency": 64.4,
+      "max_concurrency_len": 4096,
+      "weights_gib": 5.29,
+      "vllm_version": "0.32.0",
+      "log": "vllm-awq-1026-0302.log"
+    },
+    "fp16": {
+      "kv_cache_tokens": 96880,
+      "max_concurrency": 23.65,
+      "max_concurrency_len": 4096,
+      "weights_gib": 14.29,
+      "vllm_version": "0.32.0",
+      "log": "vllm-fp16-1026-0223.log"
+    },
+    "gptq-int8": {
+      "kv_cache_tokens": 208496,
+      "max_concurrency": 50.9,
+      "max_concurrency_len": 4096,
+      "weights_gib": 8.29,
+      "vllm_version": "0.32.0",
+      "log": "vllm-gptq-int8-1026-0308.log"
+    },
+    "kv-fp8": {
+      "kv_cache_tokens": 180752,
+      "max_concurrency": 44.13,
+      "max_concurrency_len": 4096,
+      "weights_gib": 14.29,
+      "vllm_version": "0.32.0",
+      "log": "vllm-kv-fp8-1026-0234.log"
+    },
+    "prefix-off": {
+      "kv_cache_tokens": 111328,
+      "max_concurrency": 27.18,
+      "max_concurrency_len": 4096,
+      "weights_gib": 14.29,
+      "vllm_version": "0.32.0",
+      "log": "vllm-prefix-off-1026-0244.log"
+    },
+    "prefix-on": {
+      "kv_cache_tokens": 111328,
+      "max_concurrency": 27.18,
+      "max_concurrency_len": 4096,
+      "weights_gib": 14.29,
+      "vllm_version": "0.32.0",
+      "log": "vllm-prefix-on-1026-0254.log"
+    }
+  },
+  "kv_warm": {
+    "fp16": {
+      "kv_cache_tokens": 111328,
+      "max_concurrency": 27.18,
+      "max_concurrency_len": 4096,
+      "weights_gib": 14.29,
+      "vllm_version": "0.32.0",
+      "log": "vllm-fp16-1026-0314.log"
+    },
+    "kv-fp8": {
+      "kv_cache_tokens": 209648,
+      "max_concurrency": 51.18,
+      "max_concurrency_len": 4096,
+      "weights_gib": 14.29,
+      "vllm_version": "0.32.0",
+      "log": "vllm-kv-fp8-1026-0319.log"
+    }
+  },
+  "prefix": {
+    "rows": [
+      {
+        "concurrency": 1,
+        "ttft_off": 153.24918110854924,
+        "ttft_on": 57.17155826278031,
+        "ttft_drop": 0.6269372674671283,
+        "tput_off": 62.703251052678084,
+        "tput_on": 64.17042041159759,
+        "tput_gain": 0.02339861704597923
+      },
+      {
+        "concurrency": 2,
+        "ttft_off": 215.8808815293014,
+        "ttft_on": 56.595120346173644,
+        "ttft_drop": 0.7378409799642586,
+        "tput_off": 118.25910228930833,
+        "tput_on": 125.75212783651122,
+        "tput_gain": 0.06336108935506712
+      },
+      {
+        "concurrency": 4,
+        "ttft_off": 405.82303958944976,
+        "ttft_on": 71.84234005399048,
+        "ttft_drop": 0.8229712632218474,
+        "tput_off": 220.63710692218072,
+        "tput_on": 248.48354479780951,
+        "tput_gain": 0.12620922320854344
+      },
+      {
+        "concurrency": 8,
+        "ttft_off": 635.7991937547922,
+        "ttft_on": 73.95364181138575,
+        "ttft_drop": 0.8836839641544004,
+        "tput_off": 390.8187481301626,
+        "tput_on": 487.28091642150895,
+        "tput_gain": 0.2468207289257769
+      },
+      {
+        "concurrency": 16,
+        "ttft_off": 757.6664679218084,
+        "ttft_on": 145.987955853343,
+        "ttft_drop": 0.8073189694486927,
+        "tput_off": 633.020708471011,
+        "tput_on": 891.870273645953,
+        "tput_gain": 0.40891168600181116
+      },
+      {
+        "concurrency": 32,
+        "ttft_off": 865.0540157686919,
+        "ttft_on": 214.8992563597858,
+        "ttft_drop": 0.751577066353683,
+        "tput_off": 890.2692394893586,
+        "tput_on": 1544.8993973795848,
+        "tput_gain": 0.7353170578663479
+      },
+      {
+        "concurrency": 64,
+        "ttft_off": 922.2344544250518,
+        "ttft_on": 340.98542551510036,
+        "ttft_drop": 0.6302616716617027,
+        "tput_off": 1108.848860332503,
+        "tput_on": 2506.007138440045,
+        "tput_gain": 1.2600078586802042
+      },
+      {
+        "concurrency": 128,
+        "ttft_off": 15616.621287539601,
+        "ttft_on": 1139.6145124454051,
+        "ttft_drop": 0.9270255395541482,
+        "tput_off": 1063.7128462315093,
+        "tput_on": 3383.920141206549,
+        "tput_gain": 2.181234628494901
+      }
+    ],
+    "picked": {
+      "concurrency": 16,
+      "ttft_off": 757.6664679218084,
+      "ttft_on": 145.987955853343,
+      "ttft_drop": 0.8073189694486927,
+      "tput_off": 633.020708471011,
+      "tput_on": 891.870273645953,
+      "tput_gain": 0.40891168600181116
+    }
+  },
+  "resume": [
+    "量化对比：在 RTX 4090 D 上对比 BF16、AWQ-INT4、GPTQ-INT8 与 FP8 KV cache：AWQ-INT4 单并发下 TPOT 由 15.4 ms 降至 5.7 ms，最高输出吞吐 2,689 tok/s；FP8 KV cache 使 KV 容量由 111,328 提升至 209,648 token。",
+    "前缀缓存：1024 token 共享前缀场景下（并发 16），开启前缀缓存后 P50 TTFT 降低 81%，输出吞吐提升 41%。"
+  ]
+}

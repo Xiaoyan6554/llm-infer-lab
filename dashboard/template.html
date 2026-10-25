@@ -168,7 +168,8 @@ footer a, header a { color: var(--ink-2); }
   <p class="sec-sub">压测工具只用 Python 标准库，闭环固定并发 + 预热 + ignore_eos，统计 TTFT / TPOT / ITL / E2E 的 P50/P95/P99。下面是在本机 mock 服务上跑的结果，用来证明工具和画图流程是通的；mock 服务的延迟是人为设定的，<b>不是 GPU 性能数据</b>。</p>
   <div class="grid2" id="mock-cards"></div>
 
-  <h2>GPU 实验：vLLM + Qwen2.5-7B-Instruct，RTX 4090</h2>
+  <h2 id="gpu-title">GPU 实验：vLLM + Qwen2.5-7B-Instruct，RTX 4090</h2>
+  <p class="sec-sub" id="gpu-sub"></p>
   <div id="gpu"></div>
 
   <footer id="footer"></footer>
@@ -734,6 +735,8 @@ window.__DATA__ = /*__DATA__*/null;
 
   // ---------- GPU ----------
   const gpu = $("#gpu"), G = D.gpu || {}, H = D.headline;
+  if (H && H.gpu) $("#gpu-title").textContent = `GPU 实验：vLLM + Qwen2.5-7B-Instruct，${H.gpu}`;
+  if (D.env) $("#gpu-sub").textContent = `实测环境：${D.env}。输入约 512 token、输出 256 token（前缀缓存实验为 1024 共享前缀 + 256），ignore_eos，每轮请求数 = 并发 × 4（至少 32）。`;
   const QT = ["fp16", "awq", "gptq-int8", "kv-fp8"], QC = { fp16: "--s1", awq: "--s2", "gptq-int8": "--s3", "kv-fp8": "--s4" };
   const QN = { fp16: "BF16", awq: "AWQ-INT4", "gptq-int8": "GPTQ-INT8", "kv-fp8": "FP8 KV cache" };
   if (QT.some((t) => G[t]) || (G["prefix-off"] && G["prefix-on"])) {
@@ -748,7 +751,7 @@ window.__DATA__ = /*__DATA__*/null;
   } else {
     gpu.append(el("div", { class: "todo" },
       el("h3", {}, "还没有 GPU 数据"),
-      el("p", { class: "note" }, "这一节需要一台 RTX 4090（AutoDL 之类按小时租即可，跑完全部实验约 2~4 小时）。跑完后重新生成本页，这里会自动出现量化对比和前缀缓存的曲线，以及由真实数据生成的简历句子。"),
+      el("p", { class: "note" }, "这一节需要一台 RTX 4090（AutoDL 之类按小时租即可，跑完全部实验约 1~1.5 小时）。跑完后重新生成本页，这里会自动出现量化对比和前缀缓存的曲线，以及由真实数据生成的简历句子。"),
       el("pre", {}, "pip install vllm\nbash serve/download_models.sh\ntmux new -s bench\nbash serve/run_all.sh          # 结果写到 results/results.jsonl，vLLM 日志在 logs/\npython3 bench/report.py        # 提取关键数字 + 简历句子\npython3 dashboard/build.py     # 重新生成本页")));
   }
 

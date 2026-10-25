@@ -52,7 +52,7 @@ def main() -> None:
         for tag, rows in data.items():
             ax.plot([r["concurrency"] for r in rows], [r[key] for r in rows], marker="o", label=tag)
         ax.set_xscale("log", base=2)
-        ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
+        ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
         ax.set_xlabel("Concurrency")
         ax.set_title(en)
         ax.grid(alpha=0.3)
