@@ -1,7 +1,5 @@
 # llm-infer-lab：大模型推理显存管理与服务性能实验
 
-用两部分代码，把大模型推理服务里最核心的两件事讲清楚、测清楚：
-
 1. **`kvcache/`（C++17）**：从零实现 PagedAttention 的 KV cache 分页管理器，包括块分配、引用计数、写时复制（Copy-on-Write）、基于哈希链的前缀缓存、LRU 延迟驱逐和准入水位线；配一个调度模拟器，量化"连续预留"和"分页分配"在同样显存下的吞吐差距。
 2. **`bench/`（Python，零依赖）**：OpenAI 兼容接口的流式压测工具，统计 TTFT / TPOT / ITL / 吞吐的 P50/P95/P99，支持闭环固定并发和泊松到达；在 RTX 4090 D 上用 vLLM + Qwen2.5-7B 实测对比 BF16、AWQ-INT4、GPTQ-INT8、FP8 KV cache 和前缀缓存。
 
